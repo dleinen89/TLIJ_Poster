@@ -127,8 +127,59 @@ function renderPieChart(id, data) {
                 title: {
                     display: true,
                     text: 'Customer Complaints Breakdown'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((acc, data) => acc + data, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${percentage}%`;
+                        }
+                    }
                 }
-            }
+            },
+            layout: {
+                padding: 20
+            },
+            plugins: [{
+                afterDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                    const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+
+                    chart.data.datasets.forEach(function(dataset, datasetIndex) {
+                        const meta = chart.getDatasetMeta(datasetIndex);
+                        if (!meta.hidden) {
+                            meta.data.forEach(function(element, index) {
+                                const data = dataset.data[index];
+                                const total = dataset.data.reduce((acc, data) => acc + data, 0);
+                                const percentage = ((data / total) * 100).toFixed(1) + '%';
+                                
+                                // Get the angle of the slice
+                                const startAngle = element.startAngle;
+                                const endAngle = element.endAngle;
+                                const middleAngle = startAngle + (endAngle - startAngle) / 2;
+
+                                // Convert to Cartesian coordinates
+                                const radius = element.outerRadius + 20;
+                                const x = centerX + Math.cos(middleAngle) * radius;
+                                const y = centerY + Math.sin(middleAngle) * radius;
+
+                                // Draw the percentage
+                                ctx.font = '14px Arial';
+                                ctx.fillStyle = 'black';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(percentage, x, y);
+                            });
+                        }
+                    });
+                    ctx.restore();
+                }
+            }]
         }
     });
 }
